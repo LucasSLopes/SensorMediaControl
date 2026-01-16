@@ -17,18 +17,19 @@ Aplicativo Android desenvolvido em Kotlin com Jetpack Compose que permite contro
 - **Compatibilidade Universal**: Funciona com qualquer app de áudio que implemente `MediaSession` (Spotify, YouTube Music, etc.)
 
 ## Demonstração em Vídeo
-> ⚠️ **TODO**: Adicionar vídeo demonstrando o controle por gestos em `previews/Preview_APP_Video.mp4`
+[▶️ Assista à demonstração](https://drive.google.com/file/d/1hD5gW8yzcP9tIYEn40V31Y_JQomDHOAy/view?usp=sharing)
 
 ## Pré-visualizações
 
 ### Tela Inicial - Solicitação de Permissão
-![Alerta de Permissão](previews/Preview_APP_Permission_Alert.png)
+<img src="previews/Preview_APP_Permission_Alert.png" alt="Alerta de Permissão" width="300">
 
 ### Tela Principal
-![Tela Principal](previews/Preview_APP_Home.png)
+<img src="previews/Preview_APP_Home.png" alt="Tela Principal" width="300">
 
 ### Notificação do Serviço Ativo
-![Notificação](previews/Preview_APP_Notification.png)
+<img src="previews/Preview_APP_Notification.png" alt="Notificação" width="300">
+
 
 ## Arquitetura do Sistema de Gestos
 
