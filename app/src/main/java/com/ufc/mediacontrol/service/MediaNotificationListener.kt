@@ -13,6 +13,15 @@ class MediaNotificationListener : NotificationListenerService() {
         private var currentController: MediaController? = null
 
         fun getController(): MediaController? = currentController
+
+        fun isPermissionGranted(context: Context): Boolean {
+            val packageName = context.packageName
+            val listeners = android.provider.Settings.Secure.getString(
+                context.contentResolver,
+                "enabled_notification_listeners"
+            )
+            return listeners?.contains(packageName) == true
+        }
     }
 
     private lateinit var mediaSessionManager: MediaSessionManager
@@ -37,7 +46,13 @@ class MediaNotificationListener : NotificationListenerService() {
         runCatching {
             mediaSessionManager.removeOnActiveSessionsChangedListener(sessionsListener)
         }
+        currentController = null
         super.onDestroy()
+    }
+
+    override fun onListenerDisconnected() {
+        super.onListenerDisconnected()
+        currentController = null
     }
 
     private fun updateController(list: List<MediaController>?) {

@@ -19,29 +19,66 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.ufc.mediacontrol.service.GestureForegroundService
 import com.ufc.mediacontrol.service.MediaNotificationListener
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    private var isNotificationListenerGranted by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
-            MaterialTheme {
-                MainScreen()
+        checkNotificationListenerPermission()
+
+        lifecycleScope.launch {
+            while (true) {
+                delay(1000)
+                checkNotificationListenerPermission()
             }
         }
+
+        setContent {
+            MaterialTheme {
+                // Sempre mostra MainScreen, mas com alerta integrado
+                MainScreen(
+                    hasNotificationListenerAccess = isNotificationListenerGranted,
+                    onOpenListenerSettings = { openNotificationListenerSettings() }
+                )
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        checkNotificationListenerPermission()
+    }
+
+    private fun checkNotificationListenerPermission() {
+        val currentStatus = MediaNotificationListener.isPermissionGranted(this)
+        if (isNotificationListenerGranted != currentStatus) {
+            isNotificationListenerGranted = currentStatus
+        }
+    }
+
+    private fun openNotificationListenerSettings() {
+        val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+        startActivity(intent)
     }
 }
 
 @Composable
-fun MainScreen() {
+fun MainScreen(
+    hasNotificationListenerAccess: Boolean,
+    onOpenListenerSettings: () -> Unit
+) {
     val context = LocalContext.current
-    val needsNotificationPermission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+    val needsPostNotificationPermission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
 
-    var hasNotificationPermission by remember {
+    var hasPostNotificationPermission by remember {
         mutableStateOf(
-            !needsNotificationPermission || ContextCompat.checkSelfPermission(
+            !needsPostNotificationPermission || ContextCompat.checkSelfPermission(
                 context,
                 Manifest.permission.POST_NOTIFICATIONS
             ) == PackageManager.PERMISSION_GRANTED
@@ -52,10 +89,10 @@ fun MainScreen() {
     var neutralZone by remember { mutableStateOf(20f) }
     var tiltThreshold by remember { mutableStateOf(35f) }
 
-    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+    val postNotificationLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
-        hasNotificationPermission = granted
+        hasPostNotificationPermission = granted
         Toast.makeText(
             context,
             if (granted) "Notificações permitidas" else "Permissão negada",
@@ -64,8 +101,8 @@ fun MainScreen() {
     }
 
     LaunchedEffect(Unit) {
-        if (needsNotificationPermission && !hasNotificationPermission) {
-            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        if (needsPostNotificationPermission && !hasPostNotificationPermission) {
+            postNotificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
 
@@ -81,17 +118,38 @@ fun MainScreen() {
             style = MaterialTheme.typography.headlineMedium
         )
 
-        val hasNotificationAccess = MediaNotificationListener.getController() != null
-        if (!hasNotificationAccess) {
-            Button(
-                onClick = {
-                    context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-                },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error
+        // Alerta ÚNICO e permanente para NotificationListenerService
+        if (!hasNotificationListenerAccess) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
                 )
             ) {
-                Text("⚠️ Habilitar acesso a notificações")
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "⚠️ Permissão Necessária",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    Text(
+                        text = "Este app precisa de acesso às notificações de mídia para controlar a reprodução de músicas.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    Button(
+                        onClick = onOpenListenerSettings,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text("Abrir Configurações")
+                    }
+                }
             }
         }
 
@@ -105,9 +163,10 @@ fun MainScreen() {
             Text("Controle de gestos", style = MaterialTheme.typography.titleMedium)
             Switch(
                 checked = isServiceActive,
+                enabled = hasNotificationListenerAccess, // Desabilita se não tiver permissão
                 onCheckedChange = { enable ->
                     if (enable) {
-                        if (!hasNotificationPermission && needsNotificationPermission) {
+                        if (!hasPostNotificationPermission && needsPostNotificationPermission) {
                             Toast.makeText(context, "Permita notificações primeiro", Toast.LENGTH_SHORT).show()
                             return@Switch
                         }
