@@ -1,4 +1,5 @@
 # Media Control por Gestos
+Repositório: https://github.com/LucasSLopes/SensorMediaControl.git
 
 Aplicativo Android desenvolvido em Kotlin com Jetpack Compose que permite controlar a reprodução de mídia (música, podcasts, etc.) através de gestos de inclinação do dispositivo, eliminando a necessidade de interação com a tela.
 
